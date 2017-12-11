@@ -107,22 +107,28 @@ class SelectorCV(ModelSelector):
 
         # initialize some variables
         split_method = KFold(n_splits=2)
-        best_model = self.base_model(self.n_constant)
+        best_model = None
         best_avg_logL = float('-inf')
 
         for i in range(self.min_n_components, self.max_n_components + 1):
             logLs = []
             for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
                 self.X, self.lengths = combine_sequences(cv_train_idx, self.sequences)
-                model_using_training_set = self.base_model(i)
                 X_test, lengths_test = combine_sequences(cv_test_idx, self.sequences)
-                logLs.append(model_using_training_set.score(X_test, lengths_test))
-            avg_logL = np.mean(logLs)
+                try:
+                    model_using_training_set = self.base_model(i)
+                    logLs.append(model_using_training_set.score(X_test, lengths_test))
+                except Exception as e:
+                    continue
+            avg_logL = np.mean(logLs) if len(logLs) > 0 else float('-inf')
             if avg_logL > best_avg_logL:
                 best_avg_logL = avg_logL
                 best_model = model_using_training_set
         
-        return best_model
+        if best_model != None:
+            return best_model
+        else:
+            return self.base_model(self.n_constant)
             
 
 
