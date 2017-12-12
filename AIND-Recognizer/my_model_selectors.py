@@ -76,8 +76,28 @@ class SelectorBIC(ModelSelector):
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        # initialize some variables
+        best_model = None
+        lowest_BIC = float('inf')
+
+        for i in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                model = self.base_model(i)
+                logL = model.score(self.X, self.lengths)
+                N = len(self.X) # number data points
+                logN = np.log(N)
+                p = i**2 + 2*i*model.n_features - 1
+                BIC = -2*logL + p*logN
+                if BIC < lowest_BIC:
+                    best_model = model
+                    lowest_BIC = BIC
+            except Exception as e:
+                continue
+        
+        if best_model != None:
+            return best_model
+        else:
+            return self.base_model(self.n_constant)
 
 
 class SelectorDIC(ModelSelector):
@@ -93,8 +113,31 @@ class SelectorDIC(ModelSelector):
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+         # initialize some variables
+        best_model = None
+        highest_DIC = float('-inf')
+
+        for i in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                model = self.base_model(i)
+                logL = model.score(self.X, self.lengths)
+                logLs_but_i = []
+                for word in self.hwords:
+                    if word != self.this_word:
+                        X, lengths = self.hwords[word]
+                        logLs_but_i.append(model.score(X, lengths))
+                M = len(self.words)
+                DIC = logL - sum(logLs_but_i)/(M - 1)
+                if DIC > highest_DIC:
+                    best_model = model
+                    highest_DIC = DIC
+            except Exception as e:
+                continue
+        
+        if best_model != None:
+            return best_model
+        else:
+            return self.base_model(self.n_constant)
 
 
 class SelectorCV(ModelSelector):
